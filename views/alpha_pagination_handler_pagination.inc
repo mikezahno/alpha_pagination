@@ -13,84 +13,92 @@
 class alpha_pagination_handler_pagination extends views_handler_area {
 
   function option_definition() {
-    $options = parent::option_definition();
-
-    $options['content'] = array(
-      'default' => 'Displaying @start - @end of @total',
-      'translatable' => TRUE,
+    // $options = parent::option_definition();
+    $options['pre_letter_path'] = array(
+      'default' => 'by-first-letter',
+      'translatable' => FALSE,
     );
-
     return $options;
   }
 
   function options_form(&$form, &$form_state) {
-    parent::options_form($form, $form_state);
-    $variables = array(
-      'items' => array(
-        '@start -- the initial record number in the set',
-        '@end -- the last record number in the set',
-        '@total -- the total records in the set',
-        '@name -- the human-readable name of the view',
-        '@per_page -- the number of items per page',
-        '@current_page -- the current page number',
-        '@current_record_count -- the current page record count',
-        '@page_count -- the total page count',
-      ),
-    );
-    $list = theme('item_list', $variables);
-    $form['content'] = array(
-      '#title' => t('Display'),
-      '#type' => 'textarea',
-      '#rows' => 3,
-      '#default_value' => $this->options['content'],
-      '#description' => t('You may use HTML code in this field. The following tokens are supported:') . $list,
+    // parent::options_form($form, $form_state);
+    $form['pre_letter_path'] = array(
+      '#title' => t('Path To Results View'),
+      '#type' => 'textfield',
+      '#size' => 60,
+      '#default_value' => $this->options['pre_letter_path'],
+      '#description' => t('This is the path to the view that handles the search by letter. No beginning or ending slashes.'),
     );
   }
-
+  
+  function post_execute() {
+    $query = ($this->view->build_info['query']);
+    $quoted = $query->getArguments();
+    $connection = Database::getConnection();
+    foreach ($quoted as $key => $val) {
+      if (is_array($val)) {
+        $quoted[$key] = implode(', ', array_map(array($connection, 'quote'), $val));
+      }
+      else {
+        $quoted[$key] = $connection->quote($val);
+      }
+    }
+    $this->options['query'] = check_plain(strtr($query, $quoted));
+  }
 
   /**
    * Find out the information to render.
    */
   function render($empty = FALSE) {
-    // Must have options and does not work on summaries.
-    if (!isset($this->options['content']) || $this->view->plugin_name == 'default_summary') {
-      return;
-    }
-    $output = '';
-    $format = $this->options['content'];
-    // Calculate the page totals.
-    $current_page = (int) $this->view->get_current_page() + 1;
-    $per_page = (int) $this->view->get_items_per_page();
-    $count = count($this->view->result);
-    // @TODO: Maybe use a possible is views empty functionality.
-    // Not every view has total_rows set, use view->result instead.
-    $total = isset($this->view->total_rows) ? $this->view->total_rows : count($this->view->result);
-    $name = check_plain($this->view->human_name);
-    if ($per_page === 0) {
-      $page_count = 1;
-      $start = 1;
-      $end = $total;
-    }
-    else {
-      $page_count = (int) ceil($total / $per_page);
-      $total_count = $current_page * $per_page;
-      if ($total_count > $total) {
-        $total_count = $total;
+    $query_parts = explode("\n", $this->options['query']);
+    
+    foreach ($query_parts as $k => $part) {
+      if ($position = strpos($part, "SUBSTRING")) {
+        $part = substr($part, 0, $position) . " 1 OR " . substr($part, $position);
+        $query_parts[$k] = $part;
       }
-      $start = ($current_page - 1) * $per_page + 1;
-      $end = $total_count;
     }
-    $current_record_count = ($end - $start) + 1;
-    // Get the search information.
-    $items = array('start', 'end', 'total', 'name', 'per_page', 'current_page', 'current_record_count', 'page_count');
-    $replacements = array();
-    foreach ($items as $item) {
-      $replacements["@$item"] = ${$item};
+      
+    $last_line = array_pop($query_parts);
+    if (substr($last_line, 0, 5) != "LIMIT") {
+      $query_parts[] = $last_line;
     }
-    // Send the output.
-    if (!empty($total)) {
-      $output .= filter_xss_admin(str_replace(array_keys($replacements), array_values($replacements), $format));
+    $query = join("\n", $query_parts);
+    $query = str_replace("&#039;", '\'', $query);
+
+    $result = db_query($query);
+    
+    $nids = array();
+    while($idata = $result->fetchObject()) {
+      $nids[] = $idata->nid;
     }
+    
+    $alphabet = range('A', 'Z');
+    $has_results = array();
+    foreach ($alphabet as $letter) {
+      $has_results[$letter] = FALSE;
+    }
+    
+    if (count($nids) > 0) {
+      $result = db_query('SELECT DISTINCT(SUBSTR(field_tweet_contents_value, 1, 1)) AS letter 
+                          FROM {field_data_field_tweet_contents} WHERE entity_id IN ( :nids )', array(':nids' => $nids));
+      while($idata = $result->fetchObject()) {
+        $has_results[strtoupper($idata->letter)] = TRUE;
+      }
+    }
+        
+    $output_array = array();
+    foreach ($alphabet as $letter) {
+      if ($has_results[$letter] == TRUE) {
+        $output_array[] = '<a href="/' . $this->options['pre_letter_path']. '/' . $letter . '">' . $letter . '</a>';
+      }
+      else {
+        $output_array[] = $letter;
+      }
+    }
+    $output = join(' | ', $output_array);        
     return $output;
   }
+  
 }
