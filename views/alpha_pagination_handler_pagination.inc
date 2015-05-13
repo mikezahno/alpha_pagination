@@ -18,17 +18,41 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       'default' => 'by-first-letter',
       'translatable' => FALSE,
     );
+    $options['paginate_view_field'] = array(
+      'default' => 'title',
+      'translatable' => TRUE,
+    );
     return $options;
   }
 
   function options_form(&$form, &$form_state) {
     // parent::options_form($form, $form_state);
     $form['pre_letter_path'] = array(
-      '#title' => t('Path To Results View'),
+      '#title' => t('Path to results view.'),
       '#type' => 'textfield',
       '#size' => 60,
       '#default_value' => $this->options['pre_letter_path'],
       '#description' => t('This is the path to the view that handles the search by letter. No beginning or ending slashes.'),
+    );
+    
+    // Get an array list of all non-entity or reference fields
+    $fields = array();
+    $result = db_query('SELECT field_name FROM {field_config}
+                       WHERE type = :text_long
+                          OR type = :text_with_summary
+                          OR type = :text
+                       ORDER BY field_name', array(
+                        ':text_long' => 'text_long', ':text_with_summary' => 'text_with_summary',
+                        ':text' => 'text'));
+    while ($fdata = $result->fetchObject()) {
+      $fields[$fdata->field_name] = $fdata->field_name;
+    }
+    $form['paginate_view_field'] = array(
+      '#title' => t('View field to paginate against.'),
+      '#type' => 'select',
+      '#options' => $fields,
+      '#default_value' => $this->options['paginate_view_field'],
+      '#description' => t('This will be the content field that drives the pagination.'),
     );
   }
   
@@ -81,8 +105,9 @@ class alpha_pagination_handler_pagination extends views_handler_area {
     }
     
     if (count($nids) > 0) {
-      $result = db_query('SELECT DISTINCT(SUBSTR(field_tweet_contents_value, 1, 1)) AS letter 
-                          FROM {field_data_field_tweet_contents} WHERE entity_id IN ( :nids )', array(':nids' => $nids));
+      $result = db_query('SELECT DISTINCT(SUBSTR(' . $this->options['paginate_view_field'] . '_value, 1, 1)) AS letter 
+                          FROM {field_data_' . $this->options['paginate_view_field'] . '} 
+                          WHERE entity_id IN ( :nids )', array(':nids' => $nids));
       while($idata = $result->fetchObject()) {
         $has_results[strtoupper($idata->letter)] = TRUE;
       }
