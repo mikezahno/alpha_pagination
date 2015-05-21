@@ -71,7 +71,7 @@ class alpha_pagination_handler_pagination extends views_handler_area {
    * function. This code was lifted nearly verbatim from the views module where the
    * query is constructed for the ui to show the query in the administrative area.
    */
-  function post_execute() {
+  function post_execute(&$values) {
     $query = $this->view->build_info['query'];
     $quoted = $query->getArguments();
     $connection = Database::getConnection();
@@ -102,7 +102,7 @@ class alpha_pagination_handler_pagination extends views_handler_area {
     
     // Check to see if this query is cached. If it is, then just pull our results set
     // from it so that things can move quickly through here.
-    if ($cache = cache_get('alpha_pagination_' . md5($this->options['query']))) {
+    if ($cache = cache_get('alpha_pagination:' . md5($this->options['query']))) {
       $has_results = $cache->data;
     }
     else {
@@ -110,6 +110,9 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       // it to short-circuit certain conditions that may exist and make any alterations.
       // This is not the most elegant of solutions, but it is very effective.
       $query_parts = explode("\n", $this->options['query']);
+      
+      // We need to know the type of view since different views have different keys
+      $base_field = $this->view->base_field;
     
       // If we are dealing with a substring, then short circuit it as we are most likely
       // dealing with a glossary contextual filter.
@@ -141,9 +144,9 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       $nids = array();
       $result = db_query($query);
       while($idata = $result->fetchObject()) {
-        $nids[] = $idata->nid;
+        $nids[] = $idata->$base_field;
       }
-    
+          
       // Initialize our results array with the FALSE state so each is disabled by default
       $has_results = array();
       foreach ($alphabet as $letter) {
@@ -171,7 +174,7 @@ class alpha_pagination_handler_pagination extends views_handler_area {
         }
         
         // Set the cache with the results of our efforts.
-        cache_set('alpha_pagination_' . md5($this->options['query']), $has_results);
+        cache_set('alpha_pagination:' . md5($this->options['query']), $has_results, 'cache', CACHE_TEMPORARY);
       }
     }
     
