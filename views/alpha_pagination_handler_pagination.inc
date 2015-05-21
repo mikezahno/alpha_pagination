@@ -132,6 +132,9 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       // characters back into single quotes.
       $query = join("\n", $query_parts);
       $query = str_replace("&#039;", '\'', $query);
+      $query = str_replace("&amp;", '&', $query);
+      $query = str_replace("&lt;", '<', $query);
+      $query = str_replace("&gt;", '>', $query);
 
       // Based on our query, get the list of node id's that are affected. We will use these
       // to generate our alphabetical pagination.
