@@ -111,7 +111,8 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       // This is not the most elegant of solutions, but it is very effective.
       $query_parts = explode("\n", $this->options['query']);
       
-      // We need to know the type of view since different views have different keys
+      // Get the base field. This will change depending on the type of view we are 
+      // putting the paginator on.
       $base_field = $this->view->base_field;
     
       // If we are dealing with a substring, then short circuit it as we are most likely
