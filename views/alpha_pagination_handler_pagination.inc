@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @file
+ * @file alpha_pagination_handler_pagination.inc
  * Definition of alpha_pagination_handler_pagination.
  */
 
@@ -43,7 +43,7 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       '#description' => t('This is the path to the view that handles the search by letter. No beginning or ending slashes.'),
     );
     
-    // Get an array list of all non-image, non-entity or other assorted reference fields
+    // Get an array list of all non-image, non-entity or other assorted reference fields.
     $fields = array('title' => 'title');
     $result = db_query('SELECT field_name FROM {field_config}
                        WHERE type = :text_long
@@ -70,6 +70,7 @@ class alpha_pagination_handler_pagination extends views_handler_area {
    * Once extracted, place it into the options array so it is passed to the render 
    * function. This code was lifted nearly verbatim from the views module where the
    * query is constructed for the ui to show the query in the administrative area.
+   * I am open to suggestions on how to make this better.
    */
   function post_execute(&$values) {
     $query = $this->view->build_info['query'];
@@ -101,7 +102,8 @@ class alpha_pagination_handler_pagination extends views_handler_area {
     $alphabet[] = 'all';
     
     // Check to see if this query is cached. If it is, then just pull our results set
-    // from it so that things can move quickly through here.
+    // from it so that things can move quickly through here. We're caching in the event
+    // the view has a very large result set.
     if ($cache = cache_get('alpha_pagination:' . md5($this->options['query']))) {
       $has_results = $cache->data;
     }
@@ -148,14 +150,16 @@ class alpha_pagination_handler_pagination extends views_handler_area {
         $nids[] = $idata->$base_field;
       }
           
-      // Initialize our results array with the FALSE state so each is disabled by default
+      // Initialize our results array with the FALSE state so each is disabled by default.
       $has_results = array();
       foreach ($alphabet as $letter) {
         $has_results[$letter] = FALSE;
       }
     
       // If we have nodes (which .... well we should), then get the distinct first letter
-      // from our field tables and mark them as TRUE so their letters link up.
+      // from our field tables and mark them as TRUE so their letters link up. Note that
+      // the node title is a special case that we have to take from the node table as 
+      // opposed to the body or any custom fields.
       if (count($nids) > 0) {
         switch ($this->options['paginate_view_field']) {
           case 'title':
@@ -194,9 +198,8 @@ class alpha_pagination_handler_pagination extends views_handler_area {
     }
     $output = join(' | ', $output_array);
     
-    // Wrap this in a div so that the elements in it can be styled
+    // Wrap this in a div so that the elements in it can be styled.
     $html = '<div id="alphabetic-paginator">' . $output . '</div>';      
     return $html;
   }
-  
 }
