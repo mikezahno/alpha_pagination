@@ -4,6 +4,5 @@ package = Views
 core = 7.x
 
 dependencies[] = views
-dependencies[] = views_ui
 
 files[] = views/alpha_pagination_handler_pagination.inc

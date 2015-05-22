@@ -44,7 +44,7 @@ class alpha_pagination_handler_pagination extends views_handler_area {
     );
     
     // Get an array list of all non-image, non-entity or other assorted reference fields
-    $fields = array();
+    $fields = array('title' => 'title');
     $result = db_query('SELECT field_name FROM {field_config}
                        WHERE type = :text_long
                           OR type = :text_with_summary
@@ -161,15 +161,17 @@ class alpha_pagination_handler_pagination extends views_handler_area {
           case 'title':
             $table = 'node';
             $field = 'title';
+            $where = 'nid';
             break;
           default:
             $field = $this->options['paginate_view_field'] . '_value';
             $table = 'field_data_' . $this->options['paginate_view_field'];
+            $where = 'entity_id';
             break;
         }
         $result = db_query('SELECT DISTINCT(SUBSTR(' . $field . ', 1, 1)) AS letter 
                             FROM {' . $table . '} 
-                            WHERE entity_id IN ( :nids )', array(':nids' => $nids));
+                            WHERE ' . $where . ' IN ( :nids )', array(':nids' => $nids));
         while($idata = $result->fetchObject()) {
           $has_results[strtoupper($idata->letter)] = TRUE;
         }

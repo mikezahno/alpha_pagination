@@ -1,4 +1,5 @@
-# Views Alphabetic Pagination Navigator
+Views Alphabetic Pagination Navigator
+-------------------------------------
 
 The Alpha Pagination for Views module enables you to add an alphabetical menu in the header or footer of a views display. 
 
@@ -10,7 +11,7 @@ This module exists thanks to the support of the Institute for the Arts and Human
 Dependencies
 ------------
  * views
- 
+
  
 Install
 -------
