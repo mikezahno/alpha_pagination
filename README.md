@@ -27,7 +27,7 @@ Views Integration and Configuration
 ------------------------------------
 1) Build a new view of either users, content (nodes), or comments.
 
-2) Add whatever field you want to use as the basis for the alphabetic grouping (e.g. field_last_name). You can optionally exclude this field from display if you don't want it to appear in the results shown on the page for some reason. You can only choose a field that is a textfield, textarea or a textarea with a summary.
+2) Add whatever field you want to use as the basis for the alphabetic grouping (e.g. title, body). You can optionally exclude this field from display if you don't want it to appear in the results shown on the page for some reason. You can only choose a field that is a textfield, textarea or a textarea with a summary.
 
 3) Add either a header or a footer to your view. Select the new item available in the menu of options for Global: Alpha Pagination. 
 
