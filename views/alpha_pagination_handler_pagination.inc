@@ -26,6 +26,22 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       'default' => 'title',
       'translatable' => TRUE,
     );
+    $options['paginate_classes'] = array(
+      'default' => 'pagination',
+      'translatable' => FALSE,
+    );
+    $options['paginate_active_class'] = array(
+      'default' => 'active',
+      'translatable' => FALSE,
+    );
+    $options['paginate_disabled_class'] = array(
+      'default' => 'disabled',
+      'translatable' => FALSE,
+    );
+    $options['paginate_toggle_empty'] = array(
+      'default' => 1,
+      'translatable' => FALSE,
+    );
     return $options;
   }
 
@@ -67,6 +83,31 @@ class alpha_pagination_handler_pagination extends views_handler_area {
       '#options' => $fields,
       '#default_value' => $this->options['paginate_view_field'],
       '#description' => t('This will be the content field that drives the pagination.'),
+    );
+    $form['paginate_classes'] = array(
+      '#title' => t('CSS list item classes'),
+      '#type' => 'textfield',
+      '#default_value' => $this->options['paginate_classes'],
+      '#description' => t('Add CSS classes to the UL element. Separate multiple classes with a space.'),
+    );
+    $form['paginate_active_class'] = array(
+      '#title' => t('CSS active item class'),
+      '#type' => 'textfield',
+      '#default_value' => $this->options['paginate_active_class'],
+      '#description' => t('Add CSS class to active LI elements'),
+    );
+    $form['paginate_toggle_empty'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Show letters without results'),
+      '#default_value' => $this->options['paginate_toggle_empty'],
+      '#description' => t('Show or hide letters without results'),
+    );
+    $form['paginate_disabled_class'] = array(
+      '#title' => t('CSS disabled item class'),
+      '#type' => 'textfield',
+      '#default_value' => $this->options['paginate_disabled_class'],
+      '#description' => t('Add CSS class to disabled LI elements'),
+      '#dependency' => array('edit-options-paginate-toggle-empty' => array(1)),
     );
   }
 
@@ -206,13 +247,38 @@ class alpha_pagination_handler_pagination extends views_handler_area {
 
     $items = array();
     foreach ($alphabet as $pager_option) {
-      $items[] = $pager_option === 'all' || $has_results[$pager_option] === TRUE ?
-        l(t(ucfirst($pager_option)), sprintf('%s/%s', $this->options['pre_letter_path'], $pager_option)) :
-        $pager_option;
+      // Check if if current element is active and selected
+      $item_active_class = ($pager_option === $this->view->args[0] ? $this->options['paginate_active_class'] : '');
+
+      // Show only letters with results
+      if ($pager_option === 'all' || $has_results[$pager_option] === TRUE) {
+        $items[] = array(
+          'data' => l(t(ucfirst($pager_option)), sprintf('%s/%s', $this->options['pre_letter_path'], $pager_option)),
+          'class' => array($item_active_class),
+        );
+      }
+
+      // Show all letters even with an empty result.
+      if ($pager_option !== 'all' && $has_results[$pager_option] === FALSE && $this->options['paginate_toggle_empty'] === 1) {
+        // Check if we show all results, then add a class for empty li
+        $item_disabled_class = $this->options['paginate_disabled_class'];
+        $items[] = array(
+          'data' => l(t(ucfirst($pager_option)), '#', array('external' => TRUE, 'attributes' => array('class' => array('disabled')))),
+          'class' => array($item_disabled_class, $item_active_class),
+        );
+      }
     }
+
+    // Classes
+    $pagination_classes = explode(' ', $this->options['paginate_classes']);
+    foreach ($pagination_classes as &$class) {
+      $class = views_clean_css_identifier($class);
+    }
+    $pagination_classes = implode(' ', $pagination_classes);
 
     $elements['paginator'][] = array(
       '#theme' => 'item_list',
+      '#attributes' => array('class' => $pagination_classes),
       '#items' => $items,
     );
 
